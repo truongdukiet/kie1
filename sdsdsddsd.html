@@ -1,1 +1,215 @@
-nsdnsdnsndsndsndsndsndsndsnsdnsndsnd1
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\Product;
+use App\Models\Category;
+use App\Http\Resources\Product as ProductResource;
+use Illuminate\Support\Facades\Validator;
+
+class ProductController extends Controller
+{
+    public function home()
+    {
+        $data = Product::all();
+        return view("products.list", ["data" => $data]);
+    }
+
+    public function create()
+    {
+        return view('products.create');
+    }
+
+    public function detail($slug)
+    {
+        $product = Product::where('slug', $slug)->with('category')->first();
+        $categoryName = $product->category->name;
+        $data = [
+            'product' => $product,
+            'categoryName' => $categoryName
+        ];
+        return view('products.detail', $data);
+    }
+
+    public function adminProduct()
+    {
+        $productsadmin = Product::all();
+        return view('admin.aproduct', ['productsadmin' => $productsadmin]);
+    }
+
+    public function create_(Request $request)
+    {
+        $p = new Product;
+        $p->name = $request->input('name');
+        $p->slug = $request->input('slug');
+        $p->price = $request->input('price');
+        $p->sale_price = $request->input('sale_price');
+        $p->description = $request->input('description');
+
+        // Xử lý tệp ảnh đã tải lên
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imageName = time().'.'.$image->getClientOriginalExtension();
+            $image->move(public_path('images'), $imageName);
+            $p->image = $imageName;
+        }
+
+        $p->category_id = $request->input('category_id');
+        $p->quantity = $request->input('quantity');
+        $p->save();
+
+        return redirect('/admin/aproduct')->with('success', 'Sản phẩm đã được thêm thành công!');
+    }
+
+    public function editProduct($id)
+    {
+        $productadmin = Product::find($id);
+        $categories = Category::all();
+        return view('products.edit', compact('productadmin', 'categories'));
+    }
+
+    public function uploadProduct(Request $request, $id)
+    {
+        $productadmin = Product::find($id);
+        $productadmin->name = $request->input('name');
+        $productadmin->slug = $request->input('slug');
+        $productadmin->price = $request->input('price');
+        $productadmin->sale_price = $request->input('sale_price');
+        $productadmin->description = $request->input('description');
+        $productadmin->quantity = $request->input('quantity');
+
+        // Kiểm tra nếu có tệp ảnh mới được tải lên
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $filename = time().'_'.$file->getClientOriginalName();
+            $file->move(public_path('images'), $filename);
+            $productadmin->image = $filename;
+        }
+
+        $productadmin->category_id = $request->input('category_id');
+        $productadmin->updated_at = now();
+        $productadmin->save();
+
+        return redirect('admin/aproduct');
+    }
+
+    public function deleteProduct($id)
+    {
+        $productadmin = Product::find($id);
+        $productadmin->delete();
+        return redirect('admin/aproduct');
+    }
+
+    public function index()
+    {
+        $products = Product::all();
+        return response()->json([
+            'status' => true,
+            'message' => 'Danh sách sản phẩm',
+            'data' => $products
+        ], 200);
+    }
+
+    public function show($id)
+    {
+        $product = Product::find($id);
+        if (!$product) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Sản phẩm không tồn tại',
+                'data' => null
+            ], 404);
+        }
+        return response()->json([
+            'status' => true,
+            'message' => 'Thông tin sản phẩm',
+            'data' => $product
+        ], 200);
+    }
+    public function store(Request $request)
+    {
+        // ✅ 1. VALIDATE ĐẦY ĐỦ DỮ LIỆU
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'slug' => 'required|string|max:255|unique:products',
+            'price' => 'required|numeric',
+            'sale_price' => 'nullable|numeric',
+            'description' => 'nullable|string',
+            'category_id' => 'nullable|exists:categories,id',
+            'quantity' => 'nullable|integer|min:0',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // sửa tại đây để ảnh trở thành optional
+        ]);
+
+        // ❌ Nếu validate thất bại → trả về lỗi
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Thêm sản phẩm thất bại',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        // ✅ 2. TẠO SẢN PHẨM MỚI
+        $product = new Product;
+        $product->name = $request->name;
+        $product->slug = $request->slug;
+        $product->price = $request->price;
+        $product->sale_price = $request->sale_price;
+        $product->description = $request->description;
+        $product->category_id = $request->casdasdasdasdasdategory_id;
+        $product->quantity = $request->quantity;
+
+        // ✅ 3. XỬ LÝ ẢNH (chỉ khi có gửi ảnh)
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $image->move(public_path('images'), $imageName);
+            $product->image = $imageName;
+        }
+
+        // ✅ 4. LƯU VÀ TRẢ KẾT QUẢ
+        $product->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Sản phẩm đã được thêm thành công',
+            'data' => new ProductResource($product)
+        ], 201);dsadasdasdasd
+    }
+
+
+    public function update(Request $request, Product $product)
+    {
+        $input = $request->all();
+        $validator = Validator::make($input, [
+            'name' => 'required',asdasdasdasasdasd
+            'price' => 'required|numeric',
+        ]);
+
+        if ($validator->fails())asdasdasd {
+            return response()->json([
+                'status' => false,
+                'message' => 'Cập nhật sản phẩm thất bại',
+                'data' => $validator->errors()
+            ], 400);
+        }
+
+        $product->update($input);
+        return response()->json([
+            'status' => true,
+            'message' => 'Cập nhật sản phẩm thành công',
+            'data' => new ProductResource($product)
+        ], 200);
+    }
+
+    public function destroy(Product $product)
+    {
+        $product->delete();
+        return response()->json([
+            'status' => true,
+            'message' => 'Xóa sản phẩm thành công',
+            'data' => null
+        ], 200);
+    }
+}
