@@ -1,4 +1,4 @@
-<?php
+?php
 
 namespace App\Http\Controllers;
 
@@ -157,7 +157,8 @@ class ProductController extends Controller
         $product->price = $request->price;
         $product->sale_price = $request->sale_price;
         $product->description = $request->description;
-        $product->category_id = $request->casdasdasdasdasdategory_id;
+
+        $product->category_id = $request->category_id;
         $product->quantity = $request->quantity;
 
         // ✅ 3. XỬ LÝ ẢNH (chỉ khi có gửi ảnh)
@@ -175,7 +176,8 @@ class ProductController extends Controller
             'status' => true,
             'message' => 'Sản phẩm đã được thêm thành công',
             'data' => new ProductResource($product)
-        ], 201);dsadasdasdasd
+
+        ], 201);
     }
 
 
@@ -183,11 +185,12 @@ class ProductController extends Controller
     {
         $input = $request->all();
         $validator = Validator::make($input, [
-            'name' => 'required',asdasdasdasasdasd
+
+            'name' => 'required',
             'price' => 'required|numeric',
         ]);
 
-        if ($validator->fails())asdasdasd {
+        if ($validator->fails()) {
             return response()->json([
                 'status' => false,
                 'message' => 'Cập nhật sản phẩm thất bại',
